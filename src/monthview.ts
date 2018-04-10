@@ -1,11 +1,30 @@
-import { Component, OnInit, OnChanges, Input, Output, EventEmitter, SimpleChanges, ViewChild, TemplateRef } from '@angular/core';
-import { Subscription } from 'rxjs/Subscription';
 import { DatePipe } from '@angular/common';
+import {
+    Component,
+    EventEmitter,
+    Input,
+    OnChanges,
+    OnInit,
+    Output,
+    SimpleChanges,
+    TemplateRef,
+    ViewChild,
+} from '@angular/core';
 import { Slides } from 'ionic-angular';
+import { Subscription } from 'rxjs/Subscription';
 
-import { ICalendarComponent, IEvent, IMonthView, IMonthViewRow, ITimeSelected, IRange, CalendarMode, IDateFormatter } from './calendar';
+import {
+    CalendarMode,
+    ICalendarComponent,
+    IDateFormatter,
+    IEvent,
+    IMonthView,
+    IMonthViewDisplayEventTemplateContext,
+    IMonthViewRow,
+    IRange,
+    ITimeSelected,
+} from './calendar';
 import { CalendarService } from './calendar.service';
-import { IMonthViewDisplayEventTemplateContext } from "./calendar";
 
 @Component({
     selector: 'monthview',
@@ -265,6 +284,7 @@ export class MonthViewComponent implements ICalendarComponent, OnInit, OnChanges
     private callbackOnInit = true;
     private currentDateChangedFromParentSubscription:Subscription;
     private eventSourceChangedSubscription:Subscription;
+    private localeChangedSubscription: Subscription;
     private formatDayLabel:(date:Date) => string;
     private formatDayHeaderLabel:(date:Date) => string;
     private formatTitle:(date:Date) => string;
@@ -273,32 +293,7 @@ export class MonthViewComponent implements ICalendarComponent, OnInit, OnChanges
     }
 
     ngOnInit() {
-        if (this.dateFormatter && this.dateFormatter.formatMonthViewDay) {
-            this.formatDayLabel = this.dateFormatter.formatMonthViewDay;
-        } else {
-            let dayLabelDatePipe = new DatePipe('en-US');
-            this.formatDayLabel = function (date:Date) {
-                return dayLabelDatePipe.transform(date, this.formatDay);
-            };
-        }
-
-        if (this.dateFormatter && this.dateFormatter.formatMonthViewDayHeader) {
-            this.formatDayHeaderLabel = this.dateFormatter.formatMonthViewDayHeader;
-        } else {
-            let datePipe = new DatePipe(this.locale);
-            this.formatDayHeaderLabel = function (date:Date) {
-                return datePipe.transform(date, this.formatDayHeader);
-            };
-        }
-
-        if (this.dateFormatter && this.dateFormatter.formatMonthViewTitle) {
-            this.formatTitle = this.dateFormatter.formatMonthViewTitle;
-        } else {
-            let datePipe = new DatePipe(this.locale);
-            this.formatTitle = function (date:Date) {
-                return datePipe.transform(date, this.formatMonthTitle);
-            };
-        }
+        this.initDateFormatters();
 
         if (this.lockSwipeToPrev) {
             this.slider.lockSwipeToPrev(true);
@@ -318,6 +313,10 @@ export class MonthViewComponent implements ICalendarComponent, OnInit, OnChanges
         this.eventSourceChangedSubscription = this.calendarService.eventSourceChanged$.subscribe(() => {
             this.onDataLoaded();
         });
+
+        this.localeChangedSubscription = this.calendarService.localeChanged$.subscribe((locale: string) => {
+            this.onLangChanged(locale);
+        });
     }
 
     ngOnDestroy() {
@@ -329,6 +328,11 @@ export class MonthViewComponent implements ICalendarComponent, OnInit, OnChanges
         if (this.eventSourceChangedSubscription) {
             this.eventSourceChangedSubscription.unsubscribe();
             this.eventSourceChangedSubscription = null;
+        }
+
+        if (this.localeChangedSubscription) {
+            this.localeChangedSubscription.unsubscribe();
+            this.localeChangedSubscription = null;
         }
     }
 
@@ -354,6 +358,35 @@ export class MonthViewComponent implements ICalendarComponent, OnInit, OnChanges
     ngAfterViewInit() {
         let title = this.getTitle();
         this.onTitleChanged.emit(title);
+    }
+
+    initDateFormatters() {
+        if (this.dateFormatter && this.dateFormatter.formatMonthViewDay) {
+            this.formatDayLabel = this.dateFormatter.formatMonthViewDay;
+        } else {
+            let dayLabelDatePipe = new DatePipe(this.locale);
+            this.formatDayLabel = function (date:Date) {
+                return dayLabelDatePipe.transform(date, this.formatDay);
+            };
+        }
+
+        if (this.dateFormatter && this.dateFormatter.formatMonthViewDayHeader) {
+            this.formatDayHeaderLabel = this.dateFormatter.formatMonthViewDayHeader;
+        } else {
+            let datePipe = new DatePipe(this.locale);
+            this.formatDayHeaderLabel = function (date:Date) {
+                return datePipe.transform(date, this.formatDayHeader);
+            };
+        }
+
+        if (this.dateFormatter && this.dateFormatter.formatMonthViewTitle) {
+            this.formatTitle = this.dateFormatter.formatMonthViewTitle;
+        } else {
+            let datePipe = new DatePipe(this.locale);
+            this.formatTitle = function (date:Date) {
+                return datePipe.transform(date, this.formatMonthTitle);
+            };
+        }
     }
 
     onSlideChanged() {
@@ -734,5 +767,11 @@ export class MonthViewComponent implements ICalendarComponent, OnInit, OnChanges
 
     eventSelected(event:IEvent) {
         this.onEventSelected.emit(event);
+    }
+
+    onLangChanged(locale: string) {
+        this.locale = locale;
+        this.initDateFormatters();
+        this.refreshView();
     }
 }
