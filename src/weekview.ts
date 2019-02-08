@@ -992,15 +992,33 @@ export class WeekViewComponent implements ICalendarComponent, OnInit, OnChanges 
     }
 
     refreshView() {
-        this.range = this.getRange(this.calendarService.currentDate);
-
-        if (this.inited) {
-            let title = this.getTitle();
-            this.onTitleChanged.emit(title);
+        let previousRange = null;
+        if (this.range) {
+            previousRange = {
+                startTime: this.range.startTime,
+                endTime: this.range.endTime
+            };
+            this.range = this.getRange(this.calendarService.currentDate);
+            if (this.inited) {
+                var title = this.getTitle();
+                this.onTitleChanged.emit(title);
+            }
+            this.updateCurrentView(this.range.startTime, this.views[this.currentViewIndex]);
+            if (previousRange.startTime.toISOString() != this.range.startTime.toISOString() || previousRange.endTime.toISOString() != this.range.endTime.toISOString()) {
+                this.calendarService.populateAdjacentViews(this);
+                this.calendarService.rangeChanged(this);
+            }
         }
-        this.calendarService.populateAdjacentViews(this);
-        this.updateCurrentView(this.range.startTime, this.views[this.currentViewIndex]);
-        this.calendarService.rangeChanged(this);
+        else {
+            this.range = this.getRange(this.calendarService.currentDate);
+            if (this.inited) {
+                var title = this.getTitle();
+                this.onTitleChanged.emit(title);
+            }
+            this.calendarService.populateAdjacentViews(this);
+            this.updateCurrentView(this.range.startTime, this.views[this.currentViewIndex]);
+            this.calendarService.rangeChanged(this);
+        }
     }
 
     getTitle():string {
